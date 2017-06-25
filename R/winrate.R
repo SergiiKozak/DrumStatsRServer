@@ -25,7 +25,7 @@ winrate <- function(){
 
   result <- data.frame(Id = rownames(result), offenseWinRate = result$offense.relfreq, defenseWinRate = result$defense.relfreq)
 
-  return(toJSON(result))
+  return(result)
 
 }
 
