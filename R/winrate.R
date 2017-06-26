@@ -3,6 +3,9 @@ winrate <- function(){
 
   games <- fromJSON("http://foosball-results.herokuapp.com/api/games", flatten = TRUE)
 
+  players <- fromJSON("http://foosball-results.herokuapp.com/api/players", flatten = TRUE)
+  players <- data.frame(Id = players$`_id`)
+
   games <- games[games$blue.score != games$red.score,]
 
   blueWiners <- games[games$blue.score > games$red.score,]
@@ -13,20 +16,33 @@ winrate <- function(){
 
   winners <- rbind(blueWiners, redWinners)
 
-  offense <- winners$offense
-  defense <- winners$defense
+  allPlays <- rbind(data.frame(offense = games$blue.offense._id, defense = games$blue.defense._id), data.frame(offense = games$red.offense._id, defense = games$red.defense._id))
 
-  offense.relfreq = table(offense)/nrow(winners)
-  defense.relfreq = table(defense)/nrow(winners)
+  offense.wincount = data.frame(table(winners$offense))
+  colnames(offense.wincount) <- c("Id", "offense.wincount")
+  defense.wincount = data.frame(table(winners$defense))
+  colnames(defense.wincount) <- c("Id", "defense.wincount")
 
-  result <- cbind(offense.relfreq, defense.relfreq)
+  offense.playcount = data.frame(table(allPlays$offense))
+  colnames(offense.playcount) <- c("Id", "offense.playcount")
+  defense.playcount = data.frame(table(allPlays$defense))
+  colnames(defense.playcount) <- c("Id", "defense.playcount")
 
-  result <- data.frame(result)
+  offense.scoretable <- merge(offense.wincount, offense.playcount, by.x = "Id", by.y = "Id", all.y = TRUE)
+  offense.scoretable[is.na(offense.scoretable)] <- 0
 
-  result <- data.frame(Id = rownames(result), offenseWinRate = result$offense.relfreq, defenseWinRate = result$defense.relfreq)
+  defense.scoretable <- merge(defense.wincount, defense.playcount, by.x = "Id", by.y = "Id", all.y = TRUE)
+  defense.scoretable[is.na(defense.scoretable)] <- 0
 
-  return(result)
+  scoretable <- merge(offense.scoretable, defense.scoretable, by.x = "Id", by.y = "Id", all = TRUE)
+  scoretable[is.na(scoretable)] <- 0
+
+  winRateRelative <- data.frame(Id = scoretable$Id, offenseWinRate = scoretable$offense.wincount/scoretable$offense.playcount, defenseWinRate = scoretable$defense.wincount/scoretable$defense.playcount)
+  winRateAbsolute <- data.frame(Id = scoretable$Id, offenseWinRate = scoretable$offense.wincount/nrow(games), defenseWinRate = scoretable$defense.wincount/nrow(games))
+  playCount <- data.frame(Id = scoretable$Id, offensePlayCount = scoretable$offense.playcount, defensePlayCount = scoretable$defense.playcount)
+
+  statsBundle <- list( winRateRelative = winRateRelative, winRateAbsolute = winRateAbsolute, playCount = playCount)
+
+  return(statsBundle)
 
 }
-
-print(winrate())
