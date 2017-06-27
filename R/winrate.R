@@ -1,4 +1,4 @@
-winrate <- function(){
+winrate <- function(d){
   library(jsonlite)
 
   games <- fromJSON("http://foosball-results.herokuapp.com/api/games", flatten = TRUE)
