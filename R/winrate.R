@@ -3,9 +3,6 @@ winrate <- function(){
 
   games <- fromJSON("http://foosball-results.herokuapp.com/api/games", flatten = TRUE)
 
-  players <- fromJSON("http://foosball-results.herokuapp.com/api/players", flatten = TRUE)
-  players <- data.frame(Id = players$`_id`)
-
   games <- games[games$blue.score != games$red.score,]
 
   blueWiners <- games[games$blue.score > games$red.score,]
