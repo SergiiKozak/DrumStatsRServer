@@ -52,7 +52,7 @@ winrate <- function(d){
   playCount <- data.frame(Id = scoretable$Id,
                           offensePlayCount = scoretable$offense.playcount,
                           defensePlayCount = scoretable$defense.playcount,
-                          totapPlayCount = scoretable$total.playcount)
+                          totalPlayCount = scoretable$total.playcount)
 
   statsBundle <- list( winRateRelative = winRateRelative, winRateAbsolute = winRateAbsolute, playCount = playCount)
 
