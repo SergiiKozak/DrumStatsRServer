@@ -63,22 +63,22 @@ winrate <- function(d){
   scoretable[is.na(scoretable)] <- 0
 
   winRateRelative <- data.frame(Id = scoretable$Id,
-                                offenseWinRate = scoretable$offense.wincount/scoretable$offense.playcount,
-                                defenseWinRate = scoretable$defense.wincount/scoretable$defense.playcount,
-                                totalWinRate = scoretable$total.wincount/scoretable$total.playcount)
+                                offenseRate = scoretable$offense.wincount/scoretable$offense.playcount,
+                                defenseRate = scoretable$defense.wincount/scoretable$defense.playcount,
+                                totalRate = scoretable$total.wincount/scoretable$total.playcount)
   winRateAbsolute <- data.frame(Id = scoretable$Id,
-                                offenseWinRate = scoretable$offense.wincount/nrow(games),
-                                defenseWinRate = scoretable$defense.wincount/nrow(games),
-                                totalWinRate = scoretable$total.wincount/nrow(games))
+                                offenseRate = scoretable$offense.wincount/nrow(games),
+                                defenseRate = scoretable$defense.wincount/nrow(games),
+                                totalRate = scoretable$total.wincount/nrow(games))
   playCount <- data.frame(Id = scoretable$Id,
                           offensePlayCount = scoretable$offense.playcount,
                           defensePlayCount = scoretable$defense.playcount,
                           totalPlayCount = scoretable$total.playcount)
 
   goalRate <- data.frame(Id = scoretable$Id,
-                         offenseGoalRate = scoretable$offense.ownscore/scoretable$offense.totalscore,
-                         defenseGoalRate = scoretable$defense.ownscore/scoretable$defense.totalscore,
-                         totalGoalRate = scoretable$total.ownscore/scoretable$total.totalscore)
+                         offenseRate = scoretable$offense.ownscore/scoretable$offense.totalscore,
+                         defenseRate = scoretable$defense.ownscore/scoretable$defense.totalscore,
+                         totalRate = scoretable$total.ownscore/scoretable$total.totalscore)
 
   statsBundle <- list( winRateRelative = winRateRelative, winRateAbsolute = winRateAbsolute, goalRate = goalRate, playCount = playCount)
 
