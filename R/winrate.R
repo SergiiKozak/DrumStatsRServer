@@ -22,7 +22,8 @@ winrate <- function(d){
 
   winners <- rbind(blueWiners, redWinners)
 
-  allPlays <- rbind(data.frame(offense = games$blue.offense._id, defense = games$blue.defense._id), data.frame(offense = games$red.offense._id, defense = games$red.defense._id))
+  allPlays <- rbind(data.frame(offense = games$blue.offense._id, defense = games$blue.defense._id, ownscore = games$blue.score, totalscore = games$blue.score + games$red.score),
+                    data.frame(offense = games$red.offense._id, defense = games$red.defense._id, ownscore = games$red.score, totalscore = games$blue.score + games$red.score))
 
   offense.wincount = data.frame(table(winners$offense))
   colnames(offense.wincount) <- c("Id", "offense.wincount")
@@ -36,17 +37,28 @@ winrate <- function(d){
   colnames(defense.playcount) <- c("Id", "defense.playcount")
   total.playcount = data.frame(Id = offense.playcount$Id, total.playcount = defense.playcount$defense.playcount + offense.playcount$offense.playcount)
 
+  offense.goalcount = aggregate(data.frame(allPlays$ownscore, allPlays$totalscore), list(allPlays$offense), sum)
+  colnames(offense.goalcount) <- c("Id", "offense.ownscore", "offense.totalscore")
+  defense.goalcount = aggregate(data.frame(allPlays$ownscore, allPlays$totalscore), list(allPlays$defense), sum)
+  colnames(defense.goalcount) <- c("Id", "defense.ownscore", "defense.totalscore")
+  total.goalcount = data.frame(Id = offense.goalcount$Id,
+                               total.ownscore = defense.goalcount$defense.ownscore + offense.goalcount$offense.ownscore,
+                               total.totalscore = defense.goalcount$defense.totalscore + offense.goalcount$offense.totalscore)
+
+
   offense.scoretable <- merge(offense.wincount, offense.playcount, by.x = "Id", by.y = "Id", all.y = TRUE)
+  offense.scoretable <- merge(offense.goalcount, offense.scoretable, by.x = "Id", by.y = "Id", all.y = TRUE)
   offense.scoretable[is.na(offense.scoretable)] <- 0
 
   defense.scoretable <- merge(defense.wincount, defense.playcount, by.x = "Id", by.y = "Id", all.y = TRUE)
+  defense.scoretable <- merge(defense.goalcount, defense.scoretable, by.x = "Id", by.y = "Id", all.y = TRUE)
   defense.scoretable[is.na(defense.scoretable)] <- 0
 
   total.scoretable <- merge(total.wincount, total.playcount, by.x = "Id", by.y = "Id", all.y = TRUE)
+  total.scoretable <- merge(total.goalcount, total.scoretable, by.x = "Id", by.y = "Id", all.y = TRUE)
   total.scoretable[is.na(total.scoretable)] <- 0
 
   scoretable <- merge(offense.scoretable, defense.scoretable, by.x = "Id", by.y = "Id", all = TRUE)
-  scoretable[is.na(scoretable)] <- 0
   scoretable <- merge(scoretable, total.scoretable, by.x = "Id", by.y = "Id", all = TRUE)
   scoretable[is.na(scoretable)] <- 0
 
@@ -63,7 +75,12 @@ winrate <- function(d){
                           defensePlayCount = scoretable$defense.playcount,
                           totalPlayCount = scoretable$total.playcount)
 
-  statsBundle <- list( winRateRelative = winRateRelative, winRateAbsolute = winRateAbsolute, playCount = playCount)
+  goalRate <- data.frame(Id = scoretable$Id,
+                         offenseGoalRate = scoretable$offense.ownscore/scoretable$offense.totalscore,
+                         defenseGoalRate = scoretable$defense.ownscore/scoretable$defense.totalscore,
+                         totalGoalRate = scoretable$total.ownscore/scoretable$total.totalscore)
+
+  statsBundle <- list( winRateRelative = winRateRelative, winRateAbsolute = winRateAbsolute, goalRate = goalRate, playCount = playCount)
 
   return(statsBundle)
 
