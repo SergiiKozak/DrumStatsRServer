@@ -1,6 +1,6 @@
 winrate <- function(d){
   library(jsonlite)
-  library(data.table)
+  library(plyr)
 
   games <- fromJSON("http://foosball-results.herokuapp.com/api/games", flatten = TRUE)
 
@@ -17,8 +17,8 @@ winrate <- function(d){
   blueWiners <- games[games$blue.score > games$red.score,]
   redWinners <- games[games$red.score > games$blue.score,]
 
-  blueWiners <- data.frame(offense = blueWiners$blue.offense._id, defense = blueWiners$blue.defense._id)
-  redWinners <- data.frame(offense = redWinners$red.offense._id, defense = redWinners$red.defense._id)
+  blueWiners <- data.frame(offense = blueWiners$blue.offense._id, defense = blueWiners$blue.defense._id, enemy.offense = blueWiners$red.offense._id, enemy.defense = blueWiners$red.defense._id)
+  redWinners <- data.frame(offense = redWinners$red.offense._id, defense = redWinners$red.defense._id, enemy.offense = redWinners$blue.offense._id, enemy.defense = redWinners$blue.defense._id)
 
   winners <- rbind(blueWiners, redWinners)
 
@@ -79,6 +79,23 @@ winrate <- function(d){
                          offenseRate = scoretable$offense.ownscore/scoretable$offense.totalscore,
                          defenseRate = scoretable$defense.ownscore/scoretable$defense.totalscore,
                          totalRate = scoretable$total.ownscore/scoretable$total.totalscore)
+
+  winners.merged <- rbind(data.frame(offense = winners$offense, defense = winners$defense, enemy = winners$enemy.offense),
+                          data.frame(offense = winners$offense, defense = winners$defense, enemy = winners$enemy.defense))
+
+  winnerpairs <- ddply(winners.merged, .(offense, defense), summarize, x = length(enemy))
+  bestpartner.offense <- ddply(winnerpairs, .(player = offense), summarize, wins = max(x)/2, partner = defense[which.max(x)])
+  bestpartner.defense <- ddply(winnerpairs, .(player = defense), summarize, wins = max(x)/2, partner = offense[which.max(x)])
+  bestpartner.total <- rbind(bestpartner.offense, bestpartner.defense)
+  bestpartner.total <- ddply(bestpartner.total, .(player), summarize, wins.tot = max(wins), partner = partner[which.max(wins)])
+
+  victimpairs.offense <- ddply(winners.merged, .(offense, enemy), summarize, x = length(defense))
+  victimpairs.defense <- ddply(winners.merged, .(defense, enemy), summarize, x = length(offense))
+  victim.offense <- ddply(victimpairs.offense, .(player = offense), summarize, wins = max(x), victim = enemy[which.max(x)])
+  victim.defense <- ddply(victimpairs.defense, .(player = defense), summarize, wins = max(x), victim = enemy[which.max(x)])
+  victim.total <- rbind(victim.offense, victim.defense)
+  victim.total <- ddply(victim.total, .(player), summarize, wins.tot = max(wins), victim = victim[which.max(wins)])
+
 
   statsBundle <- list( winRateRelative = winRateRelative, winRateAbsolute = winRateAbsolute, goalRate = goalRate, playCount = playCount)
 
