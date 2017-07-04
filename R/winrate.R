@@ -80,6 +80,8 @@ winrate <- function(d){
                          defenseRate = scoretable$defense.ownscore/scoretable$defense.totalscore,
                          totalRate = scoretable$total.ownscore/scoretable$total.totalscore)
 
+  #Personalities
+
   winners.merged <- rbind(data.frame(offense = winners$offense, defense = winners$defense, enemy = winners$enemy.offense),
                           data.frame(offense = winners$offense, defense = winners$defense, enemy = winners$enemy.defense))
 
@@ -96,8 +98,52 @@ winrate <- function(d){
   victim.total <- rbind(victim.offense, victim.defense)
   victim.total <- ddply(victim.total, .(player), summarize, wins.tot = max(wins), victim = victim[which.max(wins)])
 
+  losers.merged <- rbind(data.frame(offense = winners$enemy.offense, defense = winners$enemy.defense, enemy = winners$offense),
+                          data.frame(offense = winners$enemy.offense, defense = winners$enemy.defense, enemy = winners$defense))
 
-  statsBundle <- list( winRateRelative = winRateRelative, winRateAbsolute = winRateAbsolute, goalRate = goalRate, playCount = playCount)
+  loserpairs <- ddply(losers.merged, .(offense, defense), summarize, x = length(enemy))
+  worstpartner.offense <- ddply(loserpairs, .(player = offense), summarize, fails = max(x)/2, partner = defense[which.max(x)])
+  worstpartner.defense <- ddply(loserpairs, .(player = defense), summarize, fails = max(x)/2, partner = offense[which.max(x)])
+  worstpartner.total <- rbind(worstpartner.offense, worstpartner.defense)
+  worstpartner.total <- ddply(worstpartner.total, .(player), summarize, fails.tot = max(fails), partner = partner[which.max(fails)])
+
+  nemesispairs.offense <- ddply(losers.merged, .(offense, enemy), summarize, x = length(defense))
+  nemesispairs.defense <- ddply(losers.merged, .(defense, enemy), summarize, x = length(offense))
+  nemesis.offense <- ddply(nemesispairs.offense, .(player = offense), summarize, fails = max(x), nemesis = enemy[which.max(x)])
+  nemesis.defense <- ddply(nemesispairs.defense, .(player = defense), summarize, fails = max(x), nemesis = enemy[which.max(x)])
+  nemesis.total <- rbind(nemesis.offense, nemesis.defense)
+  nemesis.total <- ddply(nemesis.total, .(player), summarize, fails.tot = max(fails), nemesis = nemesis[which.max(fails)])
+
+  bestPartner <- data.frame(Id = bestpartner.offense$player,
+                            offenseId = bestpartner.offense$partner,
+                            defenseId = bestpartner.defense$partner,
+                            totalId = bestpartner.total$partner)
+
+  worstPartner <- data.frame(Id = worstpartner.offense$player,
+                            offenseId = worstpartner.offense$partner,
+                            defenseId = worstpartner.defense$partner,
+                            totalId = worstpartner.total$partner)
+
+  victim <- data.frame(Id = victim.offense$player,
+                             offenseId = victim.offense$victim,
+                             defenseId = victim.defense$victim,
+                             totalId = victim.total$victim)
+
+  nemesis <- data.frame(Id = nemesis.offense$player,
+                       offenseId = nemesis.offense$nemesis,
+                       defenseId = nemesis.defense$nemesis,
+                       totalId = nemesis.total$nemesis)
+
+
+
+  statsBundle <- list( winRateRelative = winRateRelative,
+                       winRateAbsolute = winRateAbsolute,
+                       goalRate = goalRate,
+                       playCount = playCount,
+                       bestPartner = bestPartner,
+                       worstPartner = worstPartner,
+                       victim = victim,
+                       nemesis = nemesis)
 
   return(statsBundle)
 
