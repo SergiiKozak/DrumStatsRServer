@@ -74,6 +74,8 @@ winrate <- function(d){
                                total.totalscore = defense.goalcount$defense.totalscore + offense.goalcount$offense.totalscore)
 
 
+  #Score Table
+
   offense.scoretable <- merge(offense.wincount, offense.playcount, by.x = "Id", by.y = "Id", all.y = TRUE)
   offense.scoretable <- merge(offense.goalcount, offense.scoretable, by.x = "Id", by.y = "Id", all.y = TRUE)
   offense.scoretable[is.na(offense.scoretable)] <- 0
