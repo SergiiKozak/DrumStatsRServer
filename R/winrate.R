@@ -13,6 +13,9 @@ winrate <- function(d){
 
   games <- subset(games, !(games$`_id` %in% dupes$`_id.y`))
 
+  players <- fromJSON("http://foosball-results.herokuapp.com/api/players", flatten = TRUE)
+  players <- data.frame(Id = players$`_id`)
+
 
   blueWiners <- games[games$blue.score > games$red.score,]
   redWinners <- games[games$red.score > games$blue.score,]
@@ -25,22 +28,47 @@ winrate <- function(d){
   allPlays <- rbind(data.frame(offense = games$blue.offense._id, defense = games$blue.defense._id, ownscore = games$blue.score, totalscore = games$blue.score + games$red.score),
                     data.frame(offense = games$red.offense._id, defense = games$red.defense._id, ownscore = games$red.score, totalscore = games$blue.score + games$red.score))
 
+
+  #Win Count
+
   offense.wincount = data.frame(table(winners$offense))
   colnames(offense.wincount) <- c("Id", "offense.wincount")
+  offense.wincount = merge(players, offense.wincount, by.x = "Id", by.y = "Id", all.x = TRUE)
+  offense.wincount[is.na(offense.wincount)] <- 0
+
   defense.wincount = data.frame(table(winners$defense))
   colnames(defense.wincount) <- c("Id", "defense.wincount")
+  defense.wincount = merge(players, defense.wincount, by.x = "Id", by.y = "Id", all.x = TRUE)
+  defense.wincount[is.na(defense.wincount)] <- 0
+
   total.wincount = data.frame(Id = offense.wincount$Id, total.wincount = defense.wincount$defense.wincount + offense.wincount$offense.wincount)
+
+  #Play Count
 
   offense.playcount = data.frame(table(allPlays$offense))
   colnames(offense.playcount) <- c("Id", "offense.playcount")
+  offense.playcount = merge(players, offense.playcount, by.x = "Id", by.y = "Id", all.x = TRUE)
+  offense.playcount[is.na(offense.playcount)] <- 0
+
   defense.playcount = data.frame(table(allPlays$defense))
   colnames(defense.playcount) <- c("Id", "defense.playcount")
+  defense.playcount = merge(players, defense.playcount, by.x = "Id", by.y = "Id", all.x = TRUE)
+  defense.playcount[is.na(defense.playcount)] <- 0
+
   total.playcount = data.frame(Id = offense.playcount$Id, total.playcount = defense.playcount$defense.playcount + offense.playcount$offense.playcount)
+
+  #Goal Count
 
   offense.goalcount = aggregate(data.frame(allPlays$ownscore, allPlays$totalscore), list(allPlays$offense), sum)
   colnames(offense.goalcount) <- c("Id", "offense.ownscore", "offense.totalscore")
+  offense.goalcount = merge(players, offense.goalcount, by.x = "Id", by.y = "Id", all.x = TRUE)
+  offense.goalcount[is.na(offense.goalcount)] <- 0
+
   defense.goalcount = aggregate(data.frame(allPlays$ownscore, allPlays$totalscore), list(allPlays$defense), sum)
   colnames(defense.goalcount) <- c("Id", "defense.ownscore", "defense.totalscore")
+  defense.goalcount = merge(players, defense.goalcount, by.x = "Id", by.y = "Id", all.x = TRUE)
+  defense.goalcount[is.na(defense.goalcount)] <- 0
+
   total.goalcount = data.frame(Id = offense.goalcount$Id,
                                total.ownscore = defense.goalcount$defense.ownscore + offense.goalcount$offense.ownscore,
                                total.totalscore = defense.goalcount$defense.totalscore + offense.goalcount$offense.totalscore)
@@ -66,10 +94,14 @@ winrate <- function(d){
                                 offenseRate = scoretable$offense.wincount/scoretable$offense.playcount,
                                 defenseRate = scoretable$defense.wincount/scoretable$defense.playcount,
                                 totalRate = scoretable$total.wincount/scoretable$total.playcount)
+  winRateRelative[is.nan(winRateRelative)] <- 0
+
   winRateAbsolute <- data.frame(Id = scoretable$Id,
                                 offenseRate = scoretable$offense.wincount/nrow(games),
                                 defenseRate = scoretable$defense.wincount/nrow(games),
                                 totalRate = scoretable$total.wincount/nrow(games))
+  winRateAbsolute[is.nan(winRateAbsolute)] <- 0
+
   playCount <- data.frame(Id = scoretable$Id,
                           offensePlayCount = scoretable$offense.playcount,
                           defensePlayCount = scoretable$defense.playcount,
@@ -79,6 +111,7 @@ winrate <- function(d){
                          offenseRate = scoretable$offense.ownscore/scoretable$offense.totalscore,
                          defenseRate = scoretable$defense.ownscore/scoretable$defense.totalscore,
                          totalRate = scoretable$total.ownscore/scoretable$total.totalscore)
+  goalRate[is.nan(goalRate)] <- 0
 
   #Personalities
 
