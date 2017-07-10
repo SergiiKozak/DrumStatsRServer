@@ -96,13 +96,13 @@ winrate <- function(d){
                                 offenseRate = scoretable$offense.wincount/scoretable$offense.playcount,
                                 defenseRate = scoretable$defense.wincount/scoretable$defense.playcount,
                                 totalRate = scoretable$total.wincount/scoretable$total.playcount)
-  winRateRelative[is.nan(winRateRelative)] <- 0
+  winRateRelative[is.na(winRateRelative)] <- 0
 
   winRateAbsolute <- data.frame(Id = scoretable$Id,
                                 offenseRate = scoretable$offense.wincount/nrow(games),
                                 defenseRate = scoretable$defense.wincount/nrow(games),
                                 totalRate = scoretable$total.wincount/nrow(games))
-  winRateAbsolute[is.nan(winRateAbsolute)] <- 0
+  winRateAbsolute[is.na(winRateAbsolute)] <- 0
 
   playCount <- data.frame(Id = scoretable$Id,
                           offensePlayCount = scoretable$offense.playcount,
@@ -113,7 +113,7 @@ winrate <- function(d){
                          offenseRate = scoretable$offense.ownscore/scoretable$offense.totalscore,
                          defenseRate = scoretable$defense.ownscore/scoretable$defense.totalscore,
                          totalRate = scoretable$total.ownscore/scoretable$total.totalscore)
-  goalRate[is.nan(goalRate)] <- 0
+  goalRate[is.na(goalRate)] <- 0
 
   #Personalities
 
