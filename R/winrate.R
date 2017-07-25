@@ -1,5 +1,6 @@
 winrate <- function(d){
   library(jsonlite)
+  library(plyr)
   library(dplyr)
 
   games <- getGames()
