@@ -1,6 +1,7 @@
 winrate <- function(d){
   library(jsonlite)
-  library(plyr)
+  #library(plyr)
+  library(dplyr)
 
   games <- getGames()
 
@@ -107,37 +108,78 @@ winrate <- function(d){
 
   #Personalities
 
+
   winners.merged <- rbind(data.frame(offense = winners$offense, defense = winners$defense, enemy = winners$enemy.offense),
                           data.frame(offense = winners$offense, defense = winners$defense, enemy = winners$enemy.defense))
 
-  winnerpairs <- ddply(winners.merged, .(offense, defense), summarize, x = length(enemy))
-  bestpartner.offense <- ddply(winnerpairs, .(player = offense), summarize, wins = max(x)/2, partner = defense[which.max(x)])
-  bestpartner.defense <- ddply(winnerpairs, .(player = defense), summarize, wins = max(x)/2, partner = offense[which.max(x)])
+  losers.merged <- rbind(data.frame(offense = winners$enemy.offense, defense = winners$enemy.defense, enemy = winners$offense),
+                         data.frame(offense = winners$enemy.offense, defense = winners$enemy.defense, enemy = winners$defense))
+
+  winnerpairs <- ddply(winners.merged, .(offense, defense), summarize, x = length(enemy)/2)
+
+  loserpairs <- ddply(losers.merged, .(offense, defense), summarize, x = length(enemy)/2)
+
+  partners <- merge(winnerpairs, loserpairs, by.x = c("offense", "defense"), by.y = c("offense", "defense"), all = TRUE)
+  partners[is.na(partners)] <- 0
+  partners <- data.frame(offense = partners$offense, defense = partners$defense, winrate = partners$x.x/(partners$x.x + partners$x.y))
+
+  partners %>% mutate_if(is.factor, as.character) -> partners
+
+  bestpartner.offense <- ddply(partners, .(player = offense), summarize, rate = max(winrate), partner = defense[which.max(winrate)])
+  bestpartner.defense <- ddply(partners, .(player = defense), summarize, rate = max(winrate), partner = offense[which.max(winrate)])
   bestpartner.total <- rbind(bestpartner.offense, bestpartner.defense)
-  bestpartner.total <- ddply(bestpartner.total, .(player), summarize, wins.tot = max(wins), partner = partner[which.max(wins)])
+  bestpartner.total <- ddply(bestpartner.total, .(player), summarize, rate.tot = max(rate), partner = partner[which.max(rate)])
+
+  bestpartner.offense[bestpartner.offense$rate == 0, "partner"] <- ""
+  bestpartner.defense[bestpartner.defense$rate == 0, "partner"] <- ""
+  bestpartner.total[bestpartner.total$rate == 0, "partner"] <- ""
+
+
+  worstpartner.offense <- ddply(partners, .(player = offense), summarize, rate = min(winrate), partner = defense[which.min(winrate)])
+  worstpartner.defense <- ddply(partners, .(player = defense), summarize, rate = min(winrate), partner = offense[which.min(winrate)])
+  worstpartner.total <- rbind(worstpartner.offense, worstpartner.defense)
+  worstpartner.total <- ddply(worstpartner.total, .(player), summarize, rate.tot = min(rate), partner = partner[which.min(rate)])
+
+  worstpartner.offense[worstpartner.offense$rate == 1, "partner"] <- ""
+  worstpartner.defense[worstpartner.defense$rate == 1, "partner"] <- ""
+  worstpartner.total[worstpartner.total$rate == 1, "partner"] <- ""
 
   victimpairs.offense <- ddply(winners.merged, .(offense, enemy), summarize, x = length(defense))
   victimpairs.defense <- ddply(winners.merged, .(defense, enemy), summarize, x = length(offense))
-  victim.offense <- ddply(victimpairs.offense, .(player = offense), summarize, wins = max(x), victim = enemy[which.max(x)])
-  victim.defense <- ddply(victimpairs.defense, .(player = defense), summarize, wins = max(x), victim = enemy[which.max(x)])
-  victim.total <- rbind(victim.offense, victim.defense)
-  victim.total <- ddply(victim.total, .(player), summarize, wins.tot = max(wins), victim = victim[which.max(wins)])
-
-  losers.merged <- rbind(data.frame(offense = winners$enemy.offense, defense = winners$enemy.defense, enemy = winners$offense),
-                          data.frame(offense = winners$enemy.offense, defense = winners$enemy.defense, enemy = winners$defense))
-
-  loserpairs <- ddply(losers.merged, .(offense, defense), summarize, x = length(enemy))
-  worstpartner.offense <- ddply(loserpairs, .(player = offense), summarize, fails = max(x)/2, partner = defense[which.max(x)])
-  worstpartner.defense <- ddply(loserpairs, .(player = defense), summarize, fails = max(x)/2, partner = offense[which.max(x)])
-  worstpartner.total <- rbind(worstpartner.offense, worstpartner.defense)
-  worstpartner.total <- ddply(worstpartner.total, .(player), summarize, fails.tot = max(fails), partner = partner[which.max(fails)])
 
   nemesispairs.offense <- ddply(losers.merged, .(offense, enemy), summarize, x = length(defense))
   nemesispairs.defense <- ddply(losers.merged, .(defense, enemy), summarize, x = length(offense))
-  nemesis.offense <- ddply(nemesispairs.offense, .(player = offense), summarize, fails = max(x), nemesis = enemy[which.max(x)])
-  nemesis.defense <- ddply(nemesispairs.defense, .(player = defense), summarize, fails = max(x), nemesis = enemy[which.max(x)])
+
+  enemies.offense <- merge(victimpairs.offense, nemesispairs.offense, by.x = c("offense", "enemy"), by.y = c("offense", "enemy"), all = TRUE)
+  enemies.offense[is.na(enemies.offense)] <- 0
+  enemies.offense <- data.frame(offense = enemies.offense$offense, enemy = enemies.offense$enemy, winrate = enemies.offense$x.x/(enemies.offense$x.x + enemies.offense$x.y))
+
+  enemies.offense %>% mutate_if(is.factor, as.character) -> enemies.offense
+
+  enemies.defense <- merge(victimpairs.defense, nemesispairs.defense, by.x = c("defense", "enemy"), by.y = c("defense", "enemy"), all = TRUE)
+  enemies.defense[is.na(enemies.defense)] <- 0
+  enemies.defense <- data.frame(defense = enemies.defense$defense, enemy = enemies.defense$enemy, winrate = enemies.defense$x.x/(enemies.defense$x.x + enemies.defense$x.y))
+
+  enemies.defense %>% mutate_if(is.factor, as.character) -> enemies.defense
+
+  victim.offense <- ddply(enemies.offense, .(player = offense), summarize, rate = max(winrate), enemy = enemy[which.max(winrate)])
+  victim.defense <- ddply(enemies.defense, .(player = defense), summarize, rate = max(winrate), enemy = enemy[which.max(winrate)])
+  victim.total <- rbind(victim.offense, victim.defense)
+  victim.total <- ddply(victim.total, .(player), summarize, rate.tot = max(rate), enemy = enemy[which.max(rate)])
+
+  victim.offense[victim.offense$rate == 0, "enemy"] <- ""
+  victim.defense[victim.defense$rate == 0, "enemy"] <- ""
+  victim.total[victim.total$rate == 0, "enemy"] <- ""
+
+  nemesis.offense <- ddply(enemies.offense, .(player = offense), summarize, rate = min(winrate), enemy = enemy[which.min(winrate)])
+  nemesis.defense <- ddply(enemies.defense, .(player = defense), summarize, rate = min(winrate), enemy = enemy[which.min(winrate)])
   nemesis.total <- rbind(nemesis.offense, nemesis.defense)
-  nemesis.total <- ddply(nemesis.total, .(player), summarize, fails.tot = max(fails), nemesis = nemesis[which.max(fails)])
+  nemesis.total <- ddply(nemesis.total, .(player), summarize, rate.tot = min(rate), enemy = enemy[which.min(rate)])
+
+  nemesis.offense[nemesis.offense$rate == 1, "enemy"] <- ""
+  nemesis.defense[nemesis.defense$rate == 1, "enemy"] <- ""
+  nemesis.total[nemesis.total$rate == 1, "enemy"] <- ""
+
 
   bestPartner <- data.frame(Id = bestpartner.offense$player,
                             offenseId = bestpartner.offense$partner,
@@ -150,14 +192,14 @@ winrate <- function(d){
                             totalId = worstpartner.total$partner)
 
   victim <- data.frame(Id = victim.offense$player,
-                             offenseId = victim.offense$victim,
-                             defenseId = victim.defense$victim,
-                             totalId = victim.total$victim)
+                             offenseId = victim.offense$enemy,
+                             defenseId = victim.defense$enemy,
+                             totalId = victim.total$enemy)
 
   nemesis <- data.frame(Id = nemesis.offense$player,
-                       offenseId = nemesis.offense$nemesis,
-                       defenseId = nemesis.defense$nemesis,
-                       totalId = nemesis.total$nemesis)
+                       offenseId = nemesis.offense$enemy,
+                       defenseId = nemesis.defense$enemy,
+                       totalId = nemesis.total$enemy)
 
 
 
