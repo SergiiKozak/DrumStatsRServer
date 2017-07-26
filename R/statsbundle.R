@@ -1,9 +1,14 @@
-winrate <- function(d){
+statsbundle <- function(ticker, cutoff.days, cutoff.games){
   library(jsonlite)
   library(plyr)
   library(dplyr)
 
   games <- getGames()
+  games <- filterGames(games, cutoff.days, cutoff.games)
+
+  if(nrow(games) == 0){
+    return(NULL)
+  }
 
   players <- getPlayers()
 
@@ -187,19 +192,19 @@ winrate <- function(d){
                             totalId = bestpartner.total$partner)
 
   worstPartner <- data.frame(Id = worstpartner.offense$player,
-                            offenseId = worstpartner.offense$partner,
-                            defenseId = worstpartner.defense$partner,
-                            totalId = worstpartner.total$partner)
+                             offenseId = worstpartner.offense$partner,
+                             defenseId = worstpartner.defense$partner,
+                             totalId = worstpartner.total$partner)
 
   victim <- data.frame(Id = victim.offense$player,
-                             offenseId = victim.offense$enemy,
-                             defenseId = victim.defense$enemy,
-                             totalId = victim.total$enemy)
+                       offenseId = victim.offense$enemy,
+                       defenseId = victim.defense$enemy,
+                       totalId = victim.total$enemy)
 
   nemesis <- data.frame(Id = nemesis.offense$player,
-                       offenseId = nemesis.offense$enemy,
-                       defenseId = nemesis.defense$enemy,
-                       totalId = nemesis.total$enemy)
+                        offenseId = nemesis.offense$enemy,
+                        defenseId = nemesis.defense$enemy,
+                        totalId = nemesis.total$enemy)
 
 
 
