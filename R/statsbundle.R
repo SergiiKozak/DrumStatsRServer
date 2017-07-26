@@ -6,6 +6,10 @@ statsbundle <- function(ticker, cutoff.days, cutoff.games){
   games <- getGames()
   games <- filterGames(games, cutoff.days, cutoff.games)
 
+  if(nrow(games) == 0){
+    return(NULL)
+  }
+
   players <- getPlayers()
 
 
