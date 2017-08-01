@@ -12,6 +12,27 @@ statsbundle <- function(ticker, cutoff.days, cutoff.games){
 
   players <- getPlayers()
 
+  matchOnPlayers <- function(data, matchColumn = "Id"){
+
+    replaceNa <- function(x){
+      if(is.character(x)||is.factor(x)){
+        x[is.na(x)] <- ""
+      }
+      else if (is.numeric(x)){
+        x[is.na(x)] <- 0
+      }
+      return(x)
+    }
+
+    data %>% mutate_if(is.factor, as.character) -> data
+
+    result <- merge(data, players, by.x = matchColumn, by.y = "Id", all.y = TRUE)
+
+    result <- colwise(replaceNa)(result)
+
+    return(result)
+  }
+
 
   blueWiners <- games[games$blue.score > games$red.score,]
   redWinners <- games[games$red.score > games$blue.score,]
@@ -29,13 +50,11 @@ statsbundle <- function(ticker, cutoff.days, cutoff.games){
 
   offense.wincount = data.frame(table(winners$offense))
   colnames(offense.wincount) <- c("Id", "offense.wincount")
-  offense.wincount = merge(players, offense.wincount, by.x = "Id", by.y = "Id", all.x = TRUE)
-  offense.wincount[is.na(offense.wincount)] <- 0
+  offense.wincount = matchOnPlayers(offense.wincount)
 
   defense.wincount = data.frame(table(winners$defense))
   colnames(defense.wincount) <- c("Id", "defense.wincount")
-  defense.wincount = merge(players, defense.wincount, by.x = "Id", by.y = "Id", all.x = TRUE)
-  defense.wincount[is.na(defense.wincount)] <- 0
+  defense.wincount = matchOnPlayers(defense.wincount)
 
   total.wincount = data.frame(Id = offense.wincount$Id, total.wincount = defense.wincount$defense.wincount + offense.wincount$offense.wincount)
 
@@ -43,13 +62,11 @@ statsbundle <- function(ticker, cutoff.days, cutoff.games){
 
   offense.playcount = data.frame(table(allPlays$offense))
   colnames(offense.playcount) <- c("Id", "offense.playcount")
-  offense.playcount = merge(players, offense.playcount, by.x = "Id", by.y = "Id", all.x = TRUE)
-  offense.playcount[is.na(offense.playcount)] <- 0
+  offense.playcount = matchOnPlayers(offense.playcount)
 
   defense.playcount = data.frame(table(allPlays$defense))
   colnames(defense.playcount) <- c("Id", "defense.playcount")
-  defense.playcount = merge(players, defense.playcount, by.x = "Id", by.y = "Id", all.x = TRUE)
-  defense.playcount[is.na(defense.playcount)] <- 0
+  defense.playcount = matchOnPlayers(defense.playcount)
 
   total.playcount = data.frame(Id = offense.playcount$Id, total.playcount = defense.playcount$defense.playcount + offense.playcount$offense.playcount)
 
@@ -57,13 +74,11 @@ statsbundle <- function(ticker, cutoff.days, cutoff.games){
 
   offense.goalcount = aggregate(data.frame(allPlays$ownscore, allPlays$totalscore), list(allPlays$offense), sum)
   colnames(offense.goalcount) <- c("Id", "offense.ownscore", "offense.totalscore")
-  offense.goalcount = merge(players, offense.goalcount, by.x = "Id", by.y = "Id", all.x = TRUE)
-  offense.goalcount[is.na(offense.goalcount)] <- 0
+  offense.goalcount = matchOnPlayers(offense.goalcount)
 
   defense.goalcount = aggregate(data.frame(allPlays$ownscore, allPlays$totalscore), list(allPlays$defense), sum)
   colnames(defense.goalcount) <- c("Id", "defense.ownscore", "defense.totalscore")
-  defense.goalcount = merge(players, defense.goalcount, by.x = "Id", by.y = "Id", all.x = TRUE)
-  defense.goalcount[is.na(defense.goalcount)] <- 0
+  defense.goalcount = matchOnPlayers(defense.goalcount)
 
   total.goalcount = data.frame(Id = offense.goalcount$Id,
                                total.ownscore = defense.goalcount$defense.ownscore + offense.goalcount$offense.ownscore,
@@ -128,10 +143,10 @@ statsbundle <- function(ticker, cutoff.days, cutoff.games){
   partners[is.na(partners)] <- 0
   partners <- data.frame(offense = partners$offense, defense = partners$defense, winrate = partners$x.x/(partners$x.x + partners$x.y))
 
-  partners %>% mutate_if(is.factor, as.character) -> partners
-
   bestpartner.offense <- ddply(partners, .(player = offense), summarize, rate = max(winrate), partner = defense[which.max(winrate)])
+  bestpartner.offense <- matchOnPlayers(bestpartner.offense, "player")
   bestpartner.defense <- ddply(partners, .(player = defense), summarize, rate = max(winrate), partner = offense[which.max(winrate)])
+  bestpartner.defense <- matchOnPlayers(bestpartner.defense, "player")
   bestpartner.total <- rbind(bestpartner.offense, bestpartner.defense)
   bestpartner.total <- ddply(bestpartner.total, .(player), summarize, rate.tot = max(rate), partner = partner[which.max(rate)])
 
@@ -141,7 +156,9 @@ statsbundle <- function(ticker, cutoff.days, cutoff.games){
 
 
   worstpartner.offense <- ddply(partners, .(player = offense), summarize, rate = min(winrate), partner = defense[which.min(winrate)])
+  worstpartner.offense <- matchOnPlayers(worstpartner.offense, "player")
   worstpartner.defense <- ddply(partners, .(player = defense), summarize, rate = min(winrate), partner = offense[which.min(winrate)])
+  worstpartner.defense <- matchOnPlayers(worstpartner.defense, "player")
   worstpartner.total <- rbind(worstpartner.offense, worstpartner.defense)
   worstpartner.total <- ddply(worstpartner.total, .(player), summarize, rate.tot = min(rate), partner = partner[which.min(rate)])
 
@@ -159,16 +176,14 @@ statsbundle <- function(ticker, cutoff.days, cutoff.games){
   enemies.offense[is.na(enemies.offense)] <- 0
   enemies.offense <- data.frame(offense = enemies.offense$offense, enemy = enemies.offense$enemy, winrate = enemies.offense$x.x/(enemies.offense$x.x + enemies.offense$x.y))
 
-  enemies.offense %>% mutate_if(is.factor, as.character) -> enemies.offense
-
   enemies.defense <- merge(victimpairs.defense, nemesispairs.defense, by.x = c("defense", "enemy"), by.y = c("defense", "enemy"), all = TRUE)
   enemies.defense[is.na(enemies.defense)] <- 0
   enemies.defense <- data.frame(defense = enemies.defense$defense, enemy = enemies.defense$enemy, winrate = enemies.defense$x.x/(enemies.defense$x.x + enemies.defense$x.y))
 
-  enemies.defense %>% mutate_if(is.factor, as.character) -> enemies.defense
-
   victim.offense <- ddply(enemies.offense, .(player = offense), summarize, rate = max(winrate), enemy = enemy[which.max(winrate)])
+  victim.offense <- matchOnPlayers(victim.offense, "player")
   victim.defense <- ddply(enemies.defense, .(player = defense), summarize, rate = max(winrate), enemy = enemy[which.max(winrate)])
+  victim.defense <- matchOnPlayers(victim.defense, "player")
   victim.total <- rbind(victim.offense, victim.defense)
   victim.total <- ddply(victim.total, .(player), summarize, rate.tot = max(rate), enemy = enemy[which.max(rate)])
 
@@ -177,7 +192,9 @@ statsbundle <- function(ticker, cutoff.days, cutoff.games){
   victim.total[victim.total$rate == 0, "enemy"] <- ""
 
   nemesis.offense <- ddply(enemies.offense, .(player = offense), summarize, rate = min(winrate), enemy = enemy[which.min(winrate)])
+  nemesis.offense <- matchOnPlayers(nemesis.offense, "player")
   nemesis.defense <- ddply(enemies.defense, .(player = defense), summarize, rate = min(winrate), enemy = enemy[which.min(winrate)])
+  nemesis.defense <- matchOnPlayers(nemesis.defense, "player")
   nemesis.total <- rbind(nemesis.offense, nemesis.defense)
   nemesis.total <- ddply(nemesis.total, .(player), summarize, rate.tot = min(rate), enemy = enemy[which.min(rate)])
 
