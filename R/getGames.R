@@ -3,6 +3,7 @@ getGames <- function(){
   games <- fromJSON("http://foosball-results.herokuapp.com/api/games", flatten = TRUE)
 
   games <- games[games$blue.score != games$red.score,]
+  games <- games[games$source != "og-source/staging",]
 
   dupes <- merge(games, games, by.x = c("blue.offense._id", "blue.defense._id", "red.offense._id", "red.defense._id", "blue.score", "red.score"), by.y = c("blue.offense._id", "blue.defense._id", "red.offense._id", "red.defense._id", "blue.score", "red.score"))
   dupes <- dupes[dupes$`_id.x` != dupes$`_id.y`,]
