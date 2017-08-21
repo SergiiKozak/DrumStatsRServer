@@ -3,7 +3,7 @@ filterGames <- function(games, cutoff.days, cutoff.games){
 
   if(cutoff.days > 0){
     time.current <- Sys.time()
-    time.required <- as.POSIXct(format(time.current, tz="Europe/Prague",usetz=TRUE), tz="Europe/Prague")
+    time.required <- as.POSIXct(format(time.current, tz="UTC",usetz=TRUE), tz="UTC")
     start.date <- time.required - days(cutoff.days)
     games <- games[games$endDate >= start.date,]
   }
