@@ -3,8 +3,6 @@ statsbundle <- function(ticker, cutoff.days, cutoff.games){
   library(plyr)
   library(dplyr)
 
-  Sys.setenv(TZ='Europe/Prague')
-
   games <- getGames()
   games <- filterGames(games, cutoff.days, cutoff.games)
 
