@@ -2,8 +2,9 @@ filterGames <- function(games, cutoff.days, cutoff.games){
   library(lubridate)
 
   if(cutoff.days > 0){
-    Sys.setenv(tz="Europe/Prague")
-    start.date <- Sys.time() - days(cutoff.days)
+    time.current <- Sys.time()
+    time.required <- as.POSIXct(format(time.current, tz="Europe/Prague",usetz=TRUE), tz="Europe/Prague")
+    start.date <- time.required - days(cutoff.days)
     games <- games[games$endDate >= start.date,]
   }
 
